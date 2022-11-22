@@ -1,0 +1,11 @@
+image:
+  file: .gitpod.Dockerfile
+#jetbrains:
+#  plugins:
+#    - org.rust.lang # Rust plugin
+#    - org.toml.lang # Toml plugin
+#  clion: # Configuration for Clion integration
+#    #vmoptions: "-Xmx4g"
+#    plugins:
+#      - org.rust.lang # Rust plugin
+#      - org.toml.lang # Toml plugin
