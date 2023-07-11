@@ -19,6 +19,7 @@ use std::future::Future;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::pin::Pin;
 use std::task::{Context, Poll};
+use std::time::Duration;
 use tokio::net::{TcpStream, UdpSocket};
 use trust_dns_client::client::{AsyncClient, ClientHandle};
 use trust_dns_client::error::ClientError;
@@ -66,8 +67,13 @@ pub fn system_forwarder() -> Forwarder {
 
 /// Creates a new DNS client that establishes a TCP connection to the nameserver at the given
 /// address.
-pub async fn new_tcp_client(addr: SocketAddr) -> AsyncClient {
-    let (stream, sender) = TcpClientStream::<AsyncIoTokioAsStd<TcpStream>>::new(addr);
+pub async fn new_tcp_client(name_server: SocketAddr, bind_addr: Option<SocketAddr>) -> AsyncClient {
+    let (stream, sender) =
+        TcpClientStream::<AsyncIoTokioAsStd<TcpStream>>::with_bind_addr_and_timeout(
+            name_server,
+            bind_addr,
+            Duration::from_secs(5),
+        );
     let (client, bg) = AsyncClient::new(Box::new(stream), sender, None)
         .await
         .unwrap();
@@ -79,8 +85,12 @@ pub async fn new_tcp_client(addr: SocketAddr) -> AsyncClient {
 }
 
 /// Creates a new DNS client that establishes a UDP connection to the nameserver at the given address.
-pub async fn new_udp_client(addr: SocketAddr) -> AsyncClient {
-    let stream = UdpClientStream::<UdpSocket>::new(addr);
+pub async fn new_udp_client(name_server: SocketAddr, bind_addr: Option<SocketAddr>) -> AsyncClient {
+    let stream = UdpClientStream::<UdpSocket>::with_bind_addr_and_timeout(
+        name_server,
+        bind_addr,
+        Duration::from_secs(5),
+    );
     let (client, bg) = AsyncClient::connect(stream).await.unwrap();
 
     // Run the client exchange in the background.

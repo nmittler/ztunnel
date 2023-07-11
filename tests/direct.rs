@@ -231,12 +231,59 @@ async fn test_stats_exist() {
             ("istio_connection_terminations"),
             ("istio_tcp_connections_opened"),
             ("istio_tcp_connections_closed"),
+            // DNS.
+            ("istio_dns_requests"),
+            ("istio_dns_upstream_requests"),
+            ("istio_dns_upstream_failures"),
+            ("istio_dns_upstream_request_duration_seconds"),
         ] {
             assert!(
                 metrics.query(metric, &Default::default()).is_some(),
                 "expected metric {metric}"
             );
         }
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_dns_metrics() {
+    testapp::with_app(test_config(), |app| async move {
+        // Make a valid request that will be forwarded to the upstream resolver.
+        _ = app.dns_request("www.google.com.", false, false).await;
+
+        let metrics = app.metrics().await.unwrap();
+        assert_eq!(
+            metrics.query_sum("istio_dns_requests_total", &Default::default()),
+            1,
+            "metrics: {}",
+            metrics.dump()
+        );
+
+        assert_eq!(
+            metrics.query_sum("istio_dns_upstream_requests_total", &Default::default()),
+            1,
+            "metrics: {}",
+            metrics.dump()
+        );
+        assert_eq!(
+            metrics.query_sum("istio_dns_upstream_failures_total", &Default::default()),
+            0,
+            "metrics: {}",
+            metrics.dump()
+        );
+        assert_eq!(
+            metrics
+                .query(
+                    "istio_dns_upstream_request_duration_seconds",
+                    &Default::default()
+                )
+                .unwrap()
+                .len(),
+            1,
+            "metrics: {}",
+            metrics.dump()
+        );
     })
     .await;
 }
